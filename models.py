@@ -12,7 +12,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True)
     password = Column(String)
-    is_active = Column(Boolean, default=False)
+    active = Column(Boolean, default=False)
     activation = relationship("Activation",
                               uselist=False,
                               back_populates="user")
@@ -25,6 +25,21 @@ class User(Base):
 
     def is_valid_password(self, password):
         return check_password_hash(self.password, password)
+
+    @property
+    def is_active(self):
+        return self.active
+
+    @property
+    def is_authenticated(self):
+        return self.active
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return str(self.id)
 
 
 class Activation(Base):
