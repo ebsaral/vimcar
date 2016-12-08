@@ -111,4 +111,4 @@ api.add_resource(LogoutResource, '/logout')
 # Main
 if __name__ == '__main__':
     app.secret_key = 'ASIDUIEHTUASDOIGIH1@1joKOOAdkj' # Random for session
-    app.run(debug=True)
+    app.run(host='0.0.0.0')
