@@ -32,7 +32,5 @@ Request parameters: `email` and `password` - Both required
 
 Gunicorn and Nginx configurations are added to repository in case you would like to run with a supervisor. Be aware of the `paths`.
 
-## TODOs
-- Add a few tests
 
 I don't have experience on Dockers, therefore I will leave it like this. 
