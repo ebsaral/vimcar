@@ -1,13 +1,17 @@
+import logging
 from uuid import uuid4
-from flask import Flask
+from flask import Flask, g
 from flask_login import LoginManager, login_required, login_user, \
     logout_user
 from flask_restful import Api, Resource, reqparse
 from sqlalchemy.exc import IntegrityError
 
-from models import User, Activation, session
+from models import User, Activation
+from db import get_session
 
 app = Flask(__name__)
+app.secret_key = 'ASIDUIEHTUASDOIGIH1@1joKOOAdkj' # Random for session
+app.logger.setLevel(logging.INFO)
 api = Api(app)
 
 # Session management
@@ -16,7 +20,7 @@ login_manager.init_app(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    user = session.query(User).filter_by(id=user_id).first()
+    user = g.session.query(User).filter_by(id=user_id).first()
     return user
 
 # Parameter requirements
@@ -24,6 +28,17 @@ parser = reqparse.RequestParser()
 parser.add_argument('email', required=True, help="Email is missing")
 parser.add_argument('password', required=True, help="Password is missing")
 
+# Request decorators related to session
+@app.before_request
+def before_request():
+   g.session = get_session()
+
+
+@app.teardown_request
+def teardown_request(exception):
+    session = getattr(g, 'session', None)
+    if session:
+        session.close()
 
 # Routing Resources
 
@@ -38,13 +53,17 @@ class UserResource(Resource):
         user.set_password(pw)
         activation = Activation(code=uuid4().hex)
         user.activation = activation
-        session.add(user)
+        g.session.add(user)
         try:
-            session.commit()
+            g.session.commit()
         except IntegrityError as exc:
-            session.rollback()
+            g.session.rollback()
             return {'error': 'This e-mail is already in database.'}, 400
-        return {'id': user.id, 'email': user.email, 'code': activation.code}
+        data = {'id': user.id,
+                'email': user.email,
+                'code': activation.code,
+                'is_active': user.active}
+        return data
 
 
 class ActivationResource(Resource):
@@ -52,13 +71,13 @@ class ActivationResource(Resource):
     Activation management endpoint
     """
     def get(self, code):
-        activation = session.query(Activation).filter_by(code=code).first()
+        activation = g.session.query(Activation).filter_by(code=code).first()
         if activation:
             if activation.user.is_active:
                 return {'error': 'Already activated'}, 400
             activation.user.active = True
-            session.add(activation)
-            session.commit()
+            g.session.add(activation)
+            g.session.commit()
             return {'success': "User activated"}
         else:
             return {'error': 'Invalid code, checkout the url'}, 400
@@ -80,7 +99,7 @@ class LoginResource(Resource):
     def post(self):
         args = parser.parse_args()
         email, pw = args['email'], args['password']
-        user = session.query(User).filter_by(email=email).first()
+        user = g.session.query(User).filter_by(email=email).first()
         if user and user.is_valid_password(pw):
             if not user.active:
                 return {'error': 'Activate your user'}, 400
@@ -110,5 +129,4 @@ api.add_resource(LogoutResource, '/logout')
 
 # Main
 if __name__ == '__main__':
-    app.secret_key = 'ASIDUIEHTUASDOIGIH1@1joKOOAdkj' # Random for session
     app.run(host='0.0.0.0')

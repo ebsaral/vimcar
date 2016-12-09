@@ -49,10 +49,3 @@ class Activation(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     user = relationship("User", back_populates="activation")
     code = Column(String, unique=True)
-
-
-engine = create_engine('sqlite:///database.db')
-Base.metadata.create_all(engine)
-Base.metadata.bind = engine
-DBSession = sessionmaker(bind=engine)
-session = DBSession()
