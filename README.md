@@ -16,7 +16,7 @@ Example response:
 }
 `
 
-**GET** - /activation/{code}
+**GET** - /activation/{code} (In fact, it should be a POST but I couldn't decide)
 
 
 **GET** - /protected
